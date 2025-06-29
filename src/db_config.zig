@@ -1,15 +1,9 @@
 const std = @import("std");
-
 const pg = @import("pg");
 const zap = @import("zap");
 
-pub fn db_connect() !*pg.Pool {
-    var gpa = std.heap.GeneralPurposeAllocator(.{
-        .thread_safe = true,
-    }){};
-
-    const allocator = gpa.allocator();
-    const pool = try pg.Pool.init(allocator, .{ .size = 5, .connect = .{
+pub fn db_connect(allocator: *std.mem.Allocator) !*pg.Pool {
+    const pool = try pg.Pool.init(allocator.*, .{ .size = 5, .connect = .{
         .port = 5432,
         .host = "127.0.0.1",
     }, .auth = .{
@@ -18,7 +12,6 @@ pub fn db_connect() !*pg.Pool {
         .password = "postgres",
         .timeout = 10_000,
     } });
-    // defer pool.deinit();
 
-    return pool;
+    return pool; // Return the pointer to the allocated pool
 }
