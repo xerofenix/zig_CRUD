@@ -3,7 +3,7 @@ const std = @import("std");
 const pg = @import("pg");
 const zap = @import("zap");
 
-const db = @import("./db_config.zig");
+// const db = @import("./db_config.zig");
 const users_controller = @import("./users_controller.zig");
 
 fn not_found(req: zap.Request) void {
