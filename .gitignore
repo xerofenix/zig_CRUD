@@ -1,0 +1,5 @@
+.zed
+
+demain.zig
+zig-out/
+.zig-cache/
