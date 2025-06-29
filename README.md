@@ -8,7 +8,7 @@
 
 Want to try it out ?
 -- Prerequisit
-install zig and postgres databse
+install [zig](https://ziglang.org) and [postgres](https://postgresql.org) database
 
 1. Clone this repository
 ```bash
