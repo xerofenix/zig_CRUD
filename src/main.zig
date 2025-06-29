@@ -3,7 +3,7 @@ const std = @import("std");
 const pg = @import("pg");
 const zap = @import("zap");
 
-// const db = @import("./db_config.zig");
+const db = @import("./db_config.zig");
 const users_controller = @import("./users_controller.zig");
 
 fn not_found(req: zap.Request) void {
@@ -15,19 +15,9 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{
         .thread_safe = true,
     }){};
-    const allocator = gpa.allocator();
+    var allocator = gpa.allocator();
 
-    var pool = try pg.Pool.init(allocator, .{ .size = 5, .connect = .{
-        .port = 5432,
-        .host = "127.0.0.1",
-    }, .auth = .{
-        .username = "postgres",
-        .database = "zap_crud",
-        .password = "postgres",
-        .timeout = 10_000,
-    } });
-
-    // var pool = try db.db_connect();
+    var pool = try db.db_connect(&allocator);
     defer pool.deinit();
 
     _ = try pool.exec("CREATE TABLE IF NOT EXISTS users (id serial primary key, name text)", .{});
