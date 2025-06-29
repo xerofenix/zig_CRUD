@@ -138,6 +138,8 @@ pub const user_controller = struct {
                     req.sendBody(s) catch return;
                 } else {
                     req.setStatus(.not_found);
+                    req.sendBody("User not found") catch
+                        return;
                 }
                 return;
             }
