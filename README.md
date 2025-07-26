@@ -18,7 +18,10 @@ git clone https://github.com/xerofenix/zig_CRUD
 ```bash
 cd zig_CRUD
 ```
-3. Run the program
+3. change the databse configuration in `db_config.zig` file with your database credentials.
+4. Run the program
 ```bash
 zig build run
 ```
+### Contributions are welcome
+I would love to take contributions from your side. Open a pull request if you want to add, enhance and fix something.
