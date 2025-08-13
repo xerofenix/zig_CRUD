@@ -32,6 +32,7 @@ pub fn main() !void {
     var listener = zap.Endpoint.Listener.init(allocator, .{
         .port = 3000,
         .on_request = simple_router.on_request_handler(),
+        .public_folder = "public",
         .log = true,
     });
     defer listener.deinit();
