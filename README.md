@@ -2,12 +2,12 @@
 
 ## [Zap](https://zigzap.org) is a web framework that is used in this program.
 
-## Postgres databse is used for storing user data.
+## Postgres database is used for storing user data.
 
 ### Right now only Create, Read and Delete operation is available.
 
 Want to try it out ?
--- Prerequisit
+-- Prerequisit:
 install [zig](https://ziglang.org) and [postgres](https://postgresql.org) database
 
 1. Clone this repository
