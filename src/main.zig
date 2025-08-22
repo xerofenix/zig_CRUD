@@ -7,7 +7,7 @@ const db = @import("./db_config.zig");
 const users_controller = @import("./users_controller.zig");
 
 fn not_found(req: zap.Request) void {
-    req.setStatusNumeric(200);
+    req.setStatusNumeric(400);
     req.sendBody("<html><body><h1>Hello from ZAP!!!</h1></body></html>") catch return;
 }
 
