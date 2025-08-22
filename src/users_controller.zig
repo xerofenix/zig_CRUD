@@ -53,7 +53,12 @@ pub const user_controller = struct {
             if (path["/users".len] != '/') {
                 return null;
             }
-            const idstr = path["/users".len + 1 ..];
+            var idstr = path["/users".len + 1 ..];
+
+            while (idstr.len > 0 and idstr[idstr.len - 1] == '/') {
+                idstr = idstr[0 .. idstr.len - 1];
+            }
+            if (idstr.len == 0) return null;
             return std.fmt.parseUnsigned(usize, idstr, 10) catch null;
         }
         return null;
