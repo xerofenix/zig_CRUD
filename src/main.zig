@@ -8,7 +8,7 @@ const users_controller = @import("./users_controller.zig");
 
 fn not_found(req: zap.Request) void {
     req.setStatusNumeric(400);
-    req.sendBody("<html><body><h1>Hello from ZAP!!!</h1></body></html>") catch return;
+    req.sendBody("<html><body><h1>Hello from ZAP!!!</h1><div><h2>Error 404 Not found</h2></div></body></html>") catch return;
 }
 
 pub fn main() !void {
