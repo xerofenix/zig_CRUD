@@ -152,6 +152,7 @@ pub const user_controller = struct {
         }
     }
 
+    //function for deleting user
     pub fn delete_user(e: *zap.Endpoint, req: zap.Request) void {
         const self: *user_controller = @fieldParentPtr("ep", e);
 
@@ -164,6 +165,21 @@ pub const user_controller = struct {
                 req.setStatus(.ok);
             } else {
                 req.setStatus(.not_found);
+            }
+        }
+    }
+
+    //function for updating user
+    pub fn update_user(e: *zap.Endpoint, req: zap.Request) void {
+        const self: *user_controller = @fieldParentPtr("ep", e);
+
+        if (req.path) |path| {
+            if (user_id_from_path(path)) |user_id| {
+                const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
+
+                if (result.get([]const u8, 1) == undefined or result.get(i32, 0) == undefined) {
+                    return std.json.stringify("User not found");
+                }
             }
         }
     }
