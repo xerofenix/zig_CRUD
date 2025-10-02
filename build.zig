@@ -162,4 +162,13 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addImport("zap", zap.module("zap"));
+
+    //add pg module deps
+    const pg = b.dependency("pg", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // the executable from your call to b.addExecutable(...)
+    exe.root_module.addImport("pg", pg.module("pg"));
 }
