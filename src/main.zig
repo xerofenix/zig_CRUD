@@ -6,7 +6,7 @@ const zap = @import("zap");
 const db = @import("./db_config.zig");
 const users_controller = @import("./users_controller.zig");
 
-fn not_found(req: zap.Request) void {
+fn not_found(req: zap.Request) anyerror!void {
     req.setStatusNumeric(400);
     req.sendBody("<html><body><h1>Hello from ZAP!!!</h1><div><h2>Error 404 Not found</h2></div></body></html>") catch return;
 }
