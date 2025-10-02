@@ -38,6 +38,10 @@
             .url = "git+https://github.com/zigzap/zap?ref=v0.11.0#66c5dc42c781bbb8a9100afda3c7e69ee96eddf3",
             .hash = "zap-0.10.6-GoeB8xCEJABLgoiZjWZMMT5TsoZ5OO2EZe6j24RTUYEH",
         },
+        .pg = .{
+            .url = "git+https://github.com/karlseguin/pg.zig?ref=master#bbfb0a4424922ddc047da72d8f82103d3c52c677",
+            .hash = "pg-0.0.0-Wp_7gQILBgBLi6f9QEi79-CgtmTAPGezToR4y6ILf7Hk",
+        },
     },
     .paths = .{
         "build.zig",
