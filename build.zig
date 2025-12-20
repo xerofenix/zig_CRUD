@@ -171,4 +171,14 @@ pub fn build(b: *std.Build) void {
 
     // the executable from your call to b.addExecutable(...)
     exe.root_module.addImport("pg", pg.module("pg"));
+
+    // 1. Get the dependency from build.zig.zon
+    const dotenv_dep = b.dependency("dotenv", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // 2. Add the module to your executable (e.g., 'exe')
+    // Replace 'exe' with whatever you named your b.addExecutable result
+    exe.root_module.addImport("dotenv", dotenv_dep.module("dotenv"));
 }
