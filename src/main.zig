@@ -16,6 +16,7 @@ pub fn main() !void {
         .thread_safe = true,
     }){};
     var allocator = gpa.allocator();
+    defer _ = gpa.deinit();
 
     var pool = try db.db_connect(&allocator);
     defer pool.deinit();
