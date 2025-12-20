@@ -42,6 +42,10 @@
             .url = "git+https://github.com/karlseguin/pg.zig?ref=master#bbfb0a4424922ddc047da72d8f82103d3c52c677",
             .hash = "pg-0.0.0-Wp_7gQILBgBLi6f9QEi79-CgtmTAPGezToR4y6ILf7Hk",
         },
+        .dotenv = .{
+            .url = "git+https://github.com/zigster64/dotenv.zig?ref=main#7d50f9fe0ce223d94d180d5a5a49fe0df5bc3743",
+            .hash = "dotenv-0.1.0-Q9TxeuEMAADw6cHl9uKbjwunS0PlYYc1yw9Ol82TwAAm",
+        },
     },
     .paths = .{
         "build.zig",
