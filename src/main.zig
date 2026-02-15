@@ -15,10 +15,10 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{
         .thread_safe = true,
     }){};
-    var allocator = gpa.allocator();
+    const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    var pool = try db.db_connect(&allocator);
+    var pool = try db.db_connect(allocator);
     defer pool.deinit();
 
     _ = try pool.exec("CREATE TABLE IF NOT EXISTS users (id serial primary key, name text)", .{});
