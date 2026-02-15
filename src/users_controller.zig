@@ -15,36 +15,40 @@ const new_user_req = struct {
 pub const user_controller = struct {
     pool: *pg.Pool,
     allocator: std.mem.Allocator,
-    ep: zap.Endpoint = undefined,
+    path: []const u8,
+    error_strategy: zap.Endpoint.ErrorStrategy = .log_to_response,
 
     pub fn init(allocator: std.mem.Allocator, pool: *pg.Pool) user_controller {
         return user_controller{
             .pool = pool,
             .allocator = allocator,
-            .ep = zap.Endpoint.init(.{
-                .path = "/users",
-                .get = user_controller.dispatch,
-                .post = user_controller.save_user,
-                .delete = user_controller.delete_user,
-            }),
+            .path = "/users",
         };
     }
 
-    pub fn endpoint(self: *user_controller) *zap.Endpoint {
-        return &self.ep;
+    pub fn endpoint(self: *user_controller) *user_controller {
+        return self;
     }
 
-    pub fn dispatch(e: *zap.Endpoint, req: zap.Request) void {
+    pub fn get(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            if (user_controller.user_id_from_path(path)) |_| {
-                user_controller.get_user(e, req) catch req.setStatus(.internal_server_error);
+            if (user_id_from_path(path)) |_| {
+                try self.get_user(req);
             } else {
-                user_controller.get_users(e, req) catch req.setStatus(.internal_server_error);
+                try self.get_users(req);
             }
         } else {
             req.setStatus(.not_found);
-            req.sendBody("") catch return;
+            try req.sendBody("");
         }
+    }
+
+    pub fn post(self: *user_controller, req: zap.Request) !void {
+        try self.save_user(req);
+    }
+
+    pub fn delete(self: *user_controller, req: zap.Request) !void {
+        try self.delete_user(req);
     }
 
     //function for getting id from path
@@ -65,86 +69,67 @@ pub const user_controller = struct {
     }
 
     //function for getting all users
-    pub fn get_users(e: *zap.Endpoint, req: zap.Request) !void {
-        const self: *user_controller = @fieldParentPtr("ep", e);
+    pub fn get_users(self: *user_controller, req: zap.Request) !void {
+        var result = try self.pool.query("SELECT id, name FROM users", .{});
+        defer result.deinit();
 
-        if (req.path) |_| {
-            var result = try self.pool.query("SELECT id, name FROM users", .{});
-            defer result.deinit();
-
-            var users = std.ArrayList(User).init(self.allocator);
-            while (try result.next()) |row| {
-                const id = row.get(i32, 0);
-                const name = row.get([]u8, 1);
-                try users.append(User{ .id = id, .name = name });
-            }
-
-            var string = std.ArrayList(u8).init(self.allocator);
-            const user_slice = try users.toOwnedSlice();
-            defer self.allocator.free(user_slice);
-
-            try std.json.stringify(user_slice, .{}, string.writer());
-
-            const s = try string.toOwnedSlice();
-            defer self.allocator.free(s);
-
-            req.sendBody(s) catch return;
+        var users = std.ArrayList(User).init(self.allocator);
+        defer users.deinit();
+        while (try result.next()) |row| {
+            const id = row.get(i32, 0);
+            const name = row.get([]u8, 1);
+            try users.append(User{ .id = id, .name = name });
         }
+
+        var string = std.ArrayList(u8).init(self.allocator);
+        defer string.deinit();
+        const user_slice = try users.toOwnedSlice();
+        defer self.allocator.free(user_slice);
+
+        try std.json.stringify(user_slice, .{}, string.writer());
+
+        try req.sendBody(string.items);
     }
 
     //function to add user to db
-    pub fn save_user(e: *zap.Endpoint, req: zap.Request) void {
-        const self: *user_controller = @fieldParentPtr("ep", e);
-
+    pub fn save_user(self: *user_controller, req: zap.Request) !void {
         if (req.body) |body| {
-            const maybe_user: ?std.json.Parsed(new_user_req) = std.json.parseFromSlice(new_user_req, self.allocator, body, .{}) catch |err| {
+            const maybe_user = std.json.parseFromSlice(new_user_req, self.allocator, body, .{}) catch |err| {
                 std.debug.print("error parsing json request: {any}\n", .{err});
                 req.setStatus(.bad_request);
-                req.sendBody("Error while parsing") catch {
-                    std.debug.print("error while sending parsing error", .{});
-                };
+                try req.sendBody("Error while parsing");
+                return;
+            };
+            defer maybe_user.deinit();
+
+            _ = self.pool.exec("INSERT INTO users (name) values ($1)", .{maybe_user.value.name}) catch {
+                req.setStatus(.internal_server_error);
+                try req.sendBody("Error while saving");
                 return;
             };
 
-            if (maybe_user) |user| {
-                defer user.deinit();
-                _ = self.pool.exec("INSERT INTO users (name) values ($1)", .{user.value.name}) catch {
-                    req.setStatus(.internal_server_error);
-                    req.sendBody("Error while saving") catch {
-                        std.debug.print("error while sending error", .{});
-                    };
-                    return;
-                };
-
-                req.sendBody("User added successfully") catch {
-                    std.debug.print("error while sending adding user msg", .{});
-                };
-            }
+            try req.sendBody("User added successfully");
         }
     }
 
     //function for getting user based on id
-    pub fn get_user(e: *zap.Endpoint, req: zap.Request) !void {
-        const self: *user_controller = @fieldParentPtr("ep", e);
-
+    pub fn get_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            if (user_controller.user_id_from_path(path)) |user_id| {
+            if (user_id_from_path(path)) |user_id| {
                 const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
-                if (result) |r| {
+                if ( result) |r| {
                     const user = User{
                         .id = r.get(i32, 0),
                         .name = r.get([]const u8, 1),
                     };
 
                     var string = std.ArrayList(u8).init(self.allocator);
+                    defer string.deinit();
                     try std.json.stringify(user, .{}, string.writer());
-                    const s = try string.toOwnedSlice();
-                    defer self.allocator.free(s);
-                    req.sendBody(s) catch return;
+                    try req.sendBody(string.items);
                 } else {
                     req.setStatus(.not_found);
-                    req.sendBody("User not found") catch
-                        return;
+                    try req.sendBody("User not found");
                 }
                 return;
             }
@@ -153,16 +138,15 @@ pub const user_controller = struct {
     }
 
     //function for deleting user
-    pub fn delete_user(e: *zap.Endpoint, req: zap.Request) void {
-        const self: *user_controller = @fieldParentPtr("ep", e);
-
+    pub fn delete_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            if (user_controller.user_id_from_path(path)) |user_id| {
+            if (user_id_from_path(path)) |user_id| {
                 _ = self.pool.exec("DELETE FROM users WHERE id = $1", .{user_id}) catch {
                     req.setStatus(.internal_server_error);
                     return;
                 };
                 req.setStatus(.ok);
+                try req.sendBody("");
             } else {
                 req.setStatus(.not_found);
             }
@@ -170,15 +154,16 @@ pub const user_controller = struct {
     }
 
     //function for updating user
-    pub fn update_user(e: *zap.Endpoint, req: zap.Request) void {
-        const self: *user_controller = @fieldParentPtr("ep", e);
-
+    pub fn update_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
             if (user_id_from_path(path)) |user_id| {
                 const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
-
-                if (result.get([]const u8, 1) == undefined or result.get(i32, 0) == undefined) {
-                    return std.json.stringify("User not found");
+                if (try result) |r| {
+                     // Update logic here
+                     _ = r;
+                } else {
+                    req.setStatus(.not_found);
+                    try req.sendBody("User not found");
                 }
             }
         }
