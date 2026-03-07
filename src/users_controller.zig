@@ -35,7 +35,9 @@ pub const user_controller = struct {
             if (user_id_from_path(path)) |_| {
                 try self.get_user(req);
             } else {
-                try self.get_users(req);
+                // try self.get_users(req);
+                req.setStatus(.bad_request);
+                try req.sendBody("Cannot parse the id from path | invalid user id");
             }
         } else {
             req.setStatus(.not_found);
