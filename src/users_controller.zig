@@ -32,12 +32,13 @@ pub const user_controller = struct {
 
     pub fn get(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            if (user_id_from_path(path)) |_| {
-                try self.get_user(req);
-            } else {
-                // try self.get_users(req);
+            if (user_id_from_path(path) == 0) {
                 req.setStatus(.bad_request);
                 try req.sendBody("Cannot parse the id from path | invalid user id");
+            } else if (user_id_from_path(path) == null) {
+                try self.get_users(req);
+            } else if (user_id_from_path(path)) |_| {
+                try self.get_user(req);
             }
         } else {
             req.setStatus(.not_found);
@@ -69,7 +70,7 @@ pub const user_controller = struct {
             // Attempt to parse the ID
             return std.fmt.parseUnsigned(usize, idstr, 10) catch |err| {
                 std.debug.print("Error parsing/getting ID from path {}\n", .{err});
-                return null; // Return null in case of an error
+                return 0; // Return null in case of an error
             };
         }
         return null;
@@ -160,11 +161,11 @@ pub const user_controller = struct {
     //function for updating user
     pub fn update_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            if (user_id_from_path(path)) |user_id| {
+            if (try user_id_from_path(path)) |user_id| {
                 const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
                 if (try result) |r| {
-                     // Update logic here
-                     _ = r;
+                    // Update logic here
+                    _ = r;
                 } else {
                     req.setStatus(.not_found);
                     try req.sendBody("User not found");
