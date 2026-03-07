@@ -73,22 +73,20 @@ pub const user_controller = struct {
         var result = try self.pool.query("SELECT id, name FROM users", .{});
         defer result.deinit();
 
-        var users = std.ArrayList(User).init(self.allocator);
-        defer users.deinit();
+        var users = std.ArrayList(User).empty;
+        defer users.deinit(self.allocator);
         while (try result.next()) |row| {
             const id = row.get(i32, 0);
             const name = row.get([]u8, 1);
-            try users.append(User{ .id = id, .name = name });
+            try users.append(self.allocator, User{ .id = id, .name = name });
         }
 
-        var string = std.ArrayList(u8).init(self.allocator);
-        defer string.deinit();
-        const user_slice = try users.toOwnedSlice();
+        const user_slice = try users.toOwnedSlice(self.allocator);
         defer self.allocator.free(user_slice);
 
-        try std.json.stringify(user_slice, .{}, string.writer());
-
-        try req.sendBody(string.items);
+        const json_str = try std.json.Stringify.valueAlloc(self.allocator, user_slice, .{});
+        defer self.allocator.free(json_str);
+        try req.sendBody(json_str);
     }
 
     //function to add user to db
@@ -117,16 +115,15 @@ pub const user_controller = struct {
         if (req.path) |path| {
             if (user_id_from_path(path)) |user_id| {
                 const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
-                if ( result) |r| {
+                if (result) |r| {
                     const user = User{
                         .id = r.get(i32, 0),
                         .name = r.get([]const u8, 1),
                     };
 
-                    var string = std.ArrayList(u8).init(self.allocator);
-                    defer string.deinit();
-                    try std.json.stringify(user, .{}, string.writer());
-                    try req.sendBody(string.items);
+                    const json_str = try std.json.Stringify.valueAlloc(self.allocator, user, .{});
+                    defer self.allocator.free(json_str);
+                    try req.sendBody(json_str);
                 } else {
                     req.setStatus(.not_found);
                     try req.sendBody("User not found");
