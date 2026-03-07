@@ -63,7 +63,12 @@ pub const user_controller = struct {
                 idstr = idstr[0 .. idstr.len - 1];
             }
             if (idstr.len == 0) return null;
-            return std.fmt.parseUnsigned(usize, idstr, 10) catch null;
+
+            // Attempt to parse the ID
+            return std.fmt.parseUnsigned(usize, idstr, 10) catch |err| {
+                std.debug.print("Error parsing/getting ID from path {}\n", .{err});
+                return null; // Return null in case of an error
+            };
         }
         return null;
     }
