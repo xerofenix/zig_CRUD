@@ -11,28 +11,26 @@ fn not_found(req: zap.Request) anyerror!void {
     req.sendBody("<html><body><h1>Hello from ZAP!!!</h1><div><h2>Error 404 Not found</h2></div></body></html>") catch return;
 }
 
-pub fn main() !void {
-    var gpa = std.heap.DebugAllocator(.{
-        .thread_safe = true,
-    }){};
-    const allocator = gpa.allocator();
-    defer _ = gpa.deinit();
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.gpa;
+ var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
 
-    var pool = try db.db_connect(allocator);
+const allocator = arena.allocator();
+    const io = init.io;
+    var pool = try db.db_connect(io, allocator);
     defer pool.deinit();
 
     _ = try pool.exec("CREATE TABLE IF NOT EXISTS users (id serial primary key, name text)", .{});
 
     // Modern Zap: Router initialization options changed
-    var simple_router = zap.Router.init(.{
+    var simple_router = zap.Router.init(allocator,.{
         .not_found = not_found,
     });
-   
 
     var user_controller = users_controller.user_controller.init(allocator, pool);
 
-    
-    var listener = zap.Endpoint.Listener.init(.{
+    var listener = zap.Endpoint.Listener.init(allocator,.{
         .port = 3000,
         .on_request = simple_router.on_request_handler(),
         .public_folder = "public",

@@ -3,12 +3,10 @@ const pg = @import("pg");
 const zap = @import("zap");
 const envo = @import("envo");
 
-pub fn db_connect(allocator: std.mem.Allocator) !*pg.Pool {
+pub fn db_connect(io: std.Io, allocator: std.mem.Allocator) !*pg.Pool {
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator_local = gpa.allocator();
     // defer _ = gpa.deinit();
-
-    const io = std.process.Init.io;
     // Load the .env file contents:
     const env_contents = try envo.loadFile(io, allocator, "./.env");
 
@@ -21,7 +19,7 @@ pub fn db_connect(allocator: std.mem.Allocator) !*pg.Pool {
     const port = env_data.get("PORT") orelse "5432";
     const port_num = try std.fmt.parseInt(u16, port, 10);
 
-    const pool = try pg.Pool.init(allocator, .{ .size = 5, .connect = .{
+    const pool = try pg.Pool.init(io,allocator, .{ .size = 5, .connect = .{
         .port = port_num,
         .host = host,
     }, .auth = .{
