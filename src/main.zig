@@ -13,10 +13,10 @@ fn not_found(req: zap.Request) anyerror!void {
 
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
- var arena = std.heap.ArenaAllocator.init(gpa);
+    var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
 
-const allocator = arena.allocator();
+    const allocator = arena.allocator();
     const io = init.io;
     var pool = try db.db_connect(io, allocator);
     defer pool.deinit();
@@ -24,13 +24,13 @@ const allocator = arena.allocator();
     _ = try pool.exec("CREATE TABLE IF NOT EXISTS users (id serial primary key, name text)", .{});
 
     // Modern Zap: Router initialization options changed
-    var simple_router = zap.Router.init(allocator,.{
+    var simple_router = zap.Router.init(allocator, .{
         .not_found = not_found,
     });
 
     var user_controller = users_controller.user_controller.init(allocator, pool);
 
-    var listener = zap.Endpoint.Listener.init(allocator,.{
+    var listener = zap.Endpoint.Listener.init(allocator, .{
         .port = 3000,
         .on_request = simple_router.on_request_handler(),
         .public_folder = "public",

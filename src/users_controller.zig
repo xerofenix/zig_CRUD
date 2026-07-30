@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const pg = @import("pg");
 const zap = @import("zap");
 
@@ -31,13 +32,12 @@ pub const user_controller = struct {
 
     pub fn get(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            const parsed_id = user_id_from_path(path);
-            if (parsed_id == 0) {
+            if (user_id_from_path(path) == 0) {
                 req.setStatus(.bad_request);
                 try req.sendBody("Cannot parse the id from path | invalid user id");
-            } else if (parsed_id == null) {
+            } else if (user_id_from_path(path) == null) {
                 try self.get_users(req);
-            } else {
+            } else if (user_id_from_path(path)) |_| {
                 try self.get_user(req);
             }
         } else {
@@ -54,11 +54,7 @@ pub const user_controller = struct {
         try self.delete_user(req);
     }
 
-    // Fixed put endpoint routing
-    pub fn put(self: *user_controller, req: zap.Request) !void {
-        try self.update_user(req);
-    }
-
+    //function for getting id from path
     fn user_id_from_path(path: []const u8) ?usize {
         if (path.len >= "/users".len + 2) {
             if (path["/users".len] != '/') {
@@ -71,29 +67,32 @@ pub const user_controller = struct {
             }
             if (idstr.len == 0) return null;
 
+            // Attempt to parse the ID
             return std.fmt.parseUnsigned(usize, idstr, 10) catch |err| {
                 std.debug.print("Error parsing/getting ID from path {}\n", .{err});
-                return 0;
+                return 0; // Return null in case of an error
             };
         }
         return null;
     }
 
+    //function for getting all users
     pub fn get_users(self: *user_controller, req: zap.Request) !void {
         var result = try self.pool.query("SELECT id, name FROM users", .{});
         defer result.deinit();
 
-        var users = std.ArrayList(User).init(self.allocator);
-        defer users.deinit();
-
+        var users = std.ArrayList(User).empty;
+        defer users.deinit(self.allocator);
         while (try result.next()) |row| {
-            const id = row.get(i32, 0);
-            // pg.zig strings should be referenced as immutable slices here
-            const name = row.get([]const u8, 1);
-            try users.append(User{ .id = id, .name = name });
+            const id = try row.get(i32, 0);
+            const name = try row.get([]u8, 1);
+            try users.append(self.allocator, User{ .id = id, .name = name });
         }
 
-        const json_str = try std.json.stringifyAlloc(self.allocator, users.items, .{});
+        const user_slice = try users.toOwnedSlice(self.allocator);
+        defer self.allocator.free(user_slice);
+
+        const json_str = try std.json.Stringify.valueAlloc(self.allocator, user_slice, .{});
         defer self.allocator.free(json_str);
         try req.sendBody(json_str);
     }
@@ -123,16 +122,14 @@ pub const user_controller = struct {
     pub fn get_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
             if (user_id_from_path(path)) |user_id| {
-                // Safe compile-time type-casting to i32 for PostgreSQL drivers
-                const user_id_i32 = @as(i32, @intCast(user_id));
-                const result = try self.pool.row("SELECT id, name FROM users WHERE id = $1", .{user_id_i32});
+                const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
                 if (result) |r| {
                     const user = User{
-                        .id = r.get(i32, 0),
-                        .name = r.get([]const u8, 1),
+                        .id = try r.get(i32, 0),
+                        .name = try r.get([]const u8, 1),
                     };
 
-                    const json_str = try std.json.stringifyAlloc(self.allocator, user, .{});
+                    const json_str = try std.json.Stringify.valueAlloc(self.allocator, user, .{});
                     defer self.allocator.free(json_str);
                     try req.sendBody(json_str);
                 } else {
@@ -149,8 +146,7 @@ pub const user_controller = struct {
     pub fn delete_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
             if (user_id_from_path(path)) |user_id| {
-                const user_id_i32 = @as(i32, @intCast(user_id));
-                _ = self.pool.exec("DELETE FROM users WHERE id = $1", .{user_id_i32}) catch {
+                _ = self.pool.exec("DELETE FROM users WHERE id = $1", .{user_id}) catch {
                     req.setStatus(.internal_server_error);
                     return;
                 };
@@ -162,31 +158,19 @@ pub const user_controller = struct {
         }
     }
 
-    // Completed and Fixed update_user endpoint logic
+    //function for updating user
     pub fn update_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            if (user_id_from_path(path)) |user_id| {
-                if (req.body) |body| {
-                    const parsed_payload = std.json.parseFromSlice(new_user_req, self.allocator, body, .{}) catch {
-                        req.setStatus(.bad_request);
-                        try req.sendBody("Invalid JSON body");
-                        return;
-                    };
-                    defer parsed_payload.deinit();
-
-                    const user_id_i32 = @as(i32, @intCast(user_id));
-                    _ = self.pool.exec("UPDATE users SET name = $1 WHERE id = $2", .{ parsed_payload.value.name, user_id_i32 }) catch {
-                        req.setStatus(.internal_server_error);
-                        try req.sendBody("Error updating user record");
-                        return;
-                    };
-
-                    req.setStatus(.ok);
-                    try req.sendBody("User updated successfully");
-                    return;
+            if (try user_id_from_path(path)) |user_id| {
+                const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
+                if (try result) |r| {
+                    // Update logic here
+                    _ = r;
+                } else {
+                    req.setStatus(.not_found);
+                    try req.sendBody("User not found");
                 }
             }
         }
-        req.setStatus(.not_found);
     }
 };
