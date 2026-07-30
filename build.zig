@@ -167,6 +167,10 @@ pub fn build(b: *std.Build) void {
     const pg = b.dependency("pg", .{
         .target = target,
         .optimize = optimize,
+        // Enable OpenSSL support
+        .openssl_lib_name = "ssl",
+        // .openssl_lib_path = .{ .cwd_relative = "/path/to/openssl/lib" },
+        // .openssl_include_path = .{ .cwd_relative = "/usr/include" },
     });
 
     // the executable from your call to b.addExecutable(...)
@@ -179,5 +183,5 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     // Load the "envo" module from the package:
-    exe.root_module.addImport("envo",envo_package.module("envo"));
+    exe.root_module.addImport("envo", envo_package.module("envo"));
 }

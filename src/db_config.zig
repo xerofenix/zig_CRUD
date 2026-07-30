@@ -19,9 +19,10 @@ pub fn db_connect(io: std.Io, allocator: std.mem.Allocator) !*pg.Pool {
     const port = env_data.get("PORT") orelse "5432";
     const port_num = try std.fmt.parseInt(u16, port, 10);
 
-    const pool = try pg.Pool.init(io,allocator, .{ .size = 5, .connect = .{
+    const pool = try pg.Pool.init(io, allocator, .{ .size = 5, .connect = .{
         .port = port_num,
         .host = host,
+        .tls = .{ .verify_full = null },
     }, .auth = .{
         .username = username,
         .database = database,
