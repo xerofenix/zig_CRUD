@@ -42,9 +42,9 @@
             .url = "git+https://github.com/karlseguin/pg.zig?ref=master#52b9f8a59bfd60a3aa75943a14366d859ea11f26",
             .hash = "pg-0.0.0-Wp_7gRanBgC-ixWJ42gQIxD9fajdSZEJwzmCGPBSD0Q9",
         },
-        .dotenv = .{
-            .url = "git+https://github.com/zigster64/dotenv.zig?ref=main#7d50f9fe0ce223d94d180d5a5a49fe0df5bc3743",
-            .hash = "dotenv-0.1.0-Q9TxeuEMAADw6cHl9uKbjwunS0PlYYc1yw9Ol82TwAAm",
+        .envo = .{
+            .url = "git+https://github.com/csalmeida/envo#7dc61f07f00edb4905108cc3e3a057d573459559",
+            .hash = "envo-0.0.2-fzFmAOjQAQCDrh4EMmtEVegH6pAQDrp1OcDHTCzbUpap",
         },
     },
     .paths = .{

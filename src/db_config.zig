@@ -1,22 +1,24 @@
 const std = @import("std");
 const pg = @import("pg");
 const zap = @import("zap");
-const dotenv = @import("dotenv");
+const envo = @import("envo");
 
 pub fn db_connect(allocator: std.mem.Allocator) !*pg.Pool {
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator_local = gpa.allocator();
     // defer _ = gpa.deinit();
 
-    // Load environment variables from .env file
-    var env = try dotenv.init(allocator, ".env");
-    defer env.deinit();
+    const io = std.process.Init.io;
+    // Load the .env file contents:
+    const env_contents = try envo.loadFile(io, allocator, "./.env");
 
-    const username = env.get("USERNAME") orelse "";
-    const password = env.get("PASSWORD") orelse "";
-    const database = env.get("DATABASE") orelse "zap_crud";
-    const host = env.get("HOST") orelse "";
-    const port = env.get("PORT") orelse "5432";
+    const env_data = try envo.parse(allocator, .RECURSIVE_DESCENT, env_contents); // Call .allocator()
+
+    const username = env_data.get("USERNAME") orelse "";
+    const password = env_data.get("PASSWORD") orelse "";
+    const database = env_data.get("DATABASE") orelse "zap_crud";
+    const host = env_data.get("HOST") orelse "";
+    const port = env_data.get("PORT") orelse "5432";
     const port_num = try std.fmt.parseInt(u16, port, 10);
 
     const pool = try pg.Pool.init(allocator, .{ .size = 5, .connect = .{
