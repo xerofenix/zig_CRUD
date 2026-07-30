@@ -12,7 +12,7 @@ fn not_found(req: zap.Request) anyerror!void {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{
+    var gpa = std.heap.DebugAllocator(.{
         .thread_safe = true,
     }){};
     const allocator = gpa.allocator();
@@ -23,14 +23,16 @@ pub fn main() !void {
 
     _ = try pool.exec("CREATE TABLE IF NOT EXISTS users (id serial primary key, name text)", .{});
 
-    var simple_router = zap.Router.init(allocator, .{
+    // Modern Zap: Router initialization options changed
+    var simple_router = zap.Router.init(.{
         .not_found = not_found,
     });
-    defer simple_router.deinit();
+   
 
     var user_controller = users_controller.user_controller.init(allocator, pool);
 
-    var listener = zap.Endpoint.Listener.init(allocator, .{
+    
+    var listener = zap.Endpoint.Listener.init(.{
         .port = 3000,
         .on_request = simple_router.on_request_handler(),
         .public_folder = "public",
