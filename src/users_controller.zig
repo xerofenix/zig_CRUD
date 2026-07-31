@@ -94,6 +94,7 @@ pub const user_controller = struct {
 
         const json_str = try std.json.Stringify.valueAlloc(self.allocator, user_slice, .{});
         defer self.allocator.free(json_str);
+        try req.setHeader("content-type", "application/json");
         try req.sendBody(json_str);
     }
 
@@ -113,8 +114,10 @@ pub const user_controller = struct {
                 try req.sendBody("Error while saving");
                 return;
             };
-
+            
             try req.sendBody("User added successfully");
+        } else {
+            try req.sendBody("User is required");
         }
     }
 
@@ -131,6 +134,8 @@ pub const user_controller = struct {
 
                     const json_str = try std.json.Stringify.valueAlloc(self.allocator, user, .{});
                     defer self.allocator.free(json_str);
+                    
+                    try req.setContentType(.JSON);
                     try req.sendBody(json_str);
                 } else {
                     req.setStatus(.not_found);
@@ -151,10 +156,12 @@ pub const user_controller = struct {
                     return;
                 };
                 req.setStatus(.ok);
-                try req.sendBody("");
+                try req.sendBody("User Deleted Successfully");
             } else {
                 req.setStatus(.not_found);
             }
+        } else {
+            try req.sendBody("Id is not provided");
         }
     }
 
@@ -171,6 +178,8 @@ pub const user_controller = struct {
                     try req.sendBody("User not found");
                 }
             }
+        } else {
+            try try req.sendBody("Id is not provided");
         }
     }
 };
