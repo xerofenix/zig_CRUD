@@ -54,6 +54,10 @@ pub const user_controller = struct {
         try self.delete_user(req);
     }
 
+    pub fn put(self: *user_controller, req: zap.Request) !void {
+        try self.update_user(req);
+    }
+
     //function for getting id from path
     fn user_id_from_path(path: []const u8) ?usize {
         if (path.len >= "/users".len + 2) {
@@ -114,7 +118,7 @@ pub const user_controller = struct {
                 try req.sendBody("Error while saving");
                 return;
             };
-            
+
             try req.sendBody("User added successfully");
         } else {
             try req.sendBody("User is required");
@@ -134,7 +138,7 @@ pub const user_controller = struct {
 
                     const json_str = try std.json.Stringify.valueAlloc(self.allocator, user, .{});
                     defer self.allocator.free(json_str);
-                    
+
                     try req.setContentType(.JSON);
                     try req.sendBody(json_str);
                 } else {
@@ -168,18 +172,28 @@ pub const user_controller = struct {
     //function for updating user
     pub fn update_user(self: *user_controller, req: zap.Request) !void {
         if (req.path) |path| {
-            if (try user_id_from_path(path)) |user_id| {
-                const result = try self.pool.row("SELECT id,name FROM users WHERE id = $1", .{user_id});
-                if (try result) |r| {
-                    // Update logic here
-                    _ = r;
-                } else {
-                    req.setStatus(.not_found);
-                    try req.sendBody("User not found");
+            if (user_id_from_path(path)) |user_id| {
+                if (req.body) |body| {
+                    const parsed_payload = std.json.parseFromSlice(new_user_req, self.allocator, body, .{}) catch {
+                        req.setStatus(.bad_request);
+                        try req.sendBody("Invalid JSON body");
+                        return;
+                    };
+                    defer parsed_payload.deinit();
+
+                    const user_id_i32 = @as(i32, @intCast(user_id));
+                    _ = self.pool.exec("UPDATE users SET name = $1 WHERE id = $2", .{ parsed_payload.value.name, user_id_i32 }) catch {
+                        req.setStatus(.internal_server_error);
+                        try req.sendBody("Error updating user record");
+                        return;
+                    };
+
+                    req.setStatus(.ok);
+                    try req.sendBody("User updated successfully");
+                    return;
                 }
             }
-        } else {
-            try try req.sendBody("Id is not provided");
         }
+        req.setStatus(.not_found);
     }
 };
