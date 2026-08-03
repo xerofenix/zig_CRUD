@@ -4,7 +4,6 @@
 
 ## Postgres database is used for storing user data.
 
-### Right now only Create, Read and Delete operation is available.
 
 Want to try it out ?  
 -- Prerequisit:
